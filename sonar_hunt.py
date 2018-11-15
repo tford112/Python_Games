@@ -13,8 +13,6 @@ def generateBoard():
                 row.append('%3s' % "~") ## necessary to align the ocean marks
             if ocean_mark == 1:
                 row.append('%3s' % "`")
-    # for row in layout:
-    #     print(*row)
     return layout
 
 def printBoard(board, chest_coord1=None, chest_coord2=None, show= False):
@@ -103,24 +101,40 @@ def calculate_dist(pc1, pc2, chest_coord_1, chest_coord_2):
     if row_num_diff != 0 and letter_col_diff != 0:
         ## use pythagorean theorem to find distance of third side
         dist = np.sqrt((row_num_diff**2) + (letter_col_diff**2))
-        print("\nThe distance between the sonar and chest is", dist)
     elif row_num_diff == 0:
         dist = letter_col_diff
-        print("\nThe distance between the sonar and chest is", dist)
     else:
         dist = row_num_diff
+    return dist
+
+def play_game():
+    # Generate board and chest
+    board = generateBoard()
+    board, chest_coord_1, chest_coord_2 = generate_chest(board)
+    ## printing the empty board
+    printBoard(board)
+    print("\n")
+
+    ## player moves
+    counter = 0
+    while counter < 5:
+        p_chosen = choose_sonar()
+        board, pc1, pc2 = drop_sonar(p_chosen, board)
+        # printBoard(board, chest_coord_1, chest_coord_2, True)
+        printBoard(board)
+        dist = calculate_dist(pc1, pc2,chest_coord_1, chest_coord_2)
+        print("\n")
+        if dist < 2:
+            print("You win! The chest was at: ")
+            printBoard(board, chest_coord_1, chest_coord_2, True)
+            break
         print("\nThe distance between the sonar and chest is", dist)
+        counter += 1
+    if counter == 5:
+        print("Sorry, but the chest was here: ")
+        printBoard(board, chest_coord_1, chest_coord_2, True)
+    print("\nDo you want to play again? (yes or no)")
+    if not input().lower().startswith("y"):
+        sys.exit()
 
-
-
-board = generateBoard()
-board, chest_coord_1, chest_coord_2 = generate_chest(board)
-printBoard(board)
-print("\n")
-p_chosen = choose_sonar()
-board, pc1, pc2 = drop_sonar(p_chosen, board)
-# printBoard(board, chest_coord_1, chest_coord_2, True)
-calculate_dist(pc1, pc2,chest_coord_1, chest_coord_2)
-# print((board[0][0:3]))
-
-# print("\n",layout[0])
+play_game()
