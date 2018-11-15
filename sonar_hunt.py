@@ -13,8 +13,6 @@ def generateBoard():
                 row.append('%3s' % "~") ## necessary to align the ocean marks
             if ocean_mark == 1:
                 row.append('%3s' % "`")
-    # for row in layout:
-    #     print(*row)
     return layout
 
 def printBoard(board, chest_coord1=None, chest_coord2=None, show= False):
