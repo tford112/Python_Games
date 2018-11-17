@@ -13,9 +13,11 @@ nums = [0, 1, 2 ,3 ,4 ,5 ,6 ,7 ,8, 9]
 ## Get the user's message and convert into a list and consider integers within list
 def getMessage():
     user = list(input("What is the message you want to encrypt?\n"))
-    ## Check if integers are in message
+    # making sure to account for punctuation while checking for int capability
+    punc = [",", "!", "?", ".", "\'", "\"", ""]
     for i in range(len(user)):
-        if user[i].isalpha() == False and user[i] != " ":
+        ## Check if integers are in message
+        if user[i].isalpha() == False and user[i] != " " and user[i] not in punc:
             user[i] = int(user[i])
     return user
 
@@ -44,11 +46,23 @@ def encrypt(message, key):
 
 def decrypt(message, key):
     print("\nDecrypting message")
+    message = list(message)
     for i in range(len(message)):
         if type(message[i]) == int:
-            message[i]
+            message[i] -= key
+            message[i] = str(message[i])
+        else:
+            message[i] = ord(message[i])
+            message[i] -= key
+            message[i] = chr(message[i])
+    message = "".join(message)
+    ## the ord-chr transformation of spaces leads to a strange ' " ' appearing
+    return message
 
-message = getMessage()
-key = getKey()
-encrypted = encrypt(message, key)
-print(encrypted)
+def execute():
+    message = getMessage()
+    key = getKey()
+    encrypted = encrypt(message, key)
+    print(encrypted)
+    decrypted = decrypt(encrypted, key)
+    print(decrypted)
