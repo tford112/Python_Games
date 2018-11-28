@@ -6,7 +6,7 @@ To capture a piece, black (white) must flip the opponent's rival color piece to 
 so it is in the middle of their own pieces. For example, if the board shows "BW" then black
 can play a piece next to W so it becomes "BWB" and so the W is flipped to become "BBB".
 
-For more information on game rules, please refer to
+For more information on game rules, please refer to http://www.ultraboardgames.com/othello/game-rules.php
 '''
 import random
 import sys
@@ -58,8 +58,8 @@ def defaultState(board):
     w5 = [3, "d", "w"]
     w6 = [2, "d", "w"]
     b5 = [3, "e", "b"]
-
-    default = [w1, b3, b1, w2, b2, w3, w4, b4, w5, b5, w6]
+    w7 = [5, "c", "w"]
+    default = [w1, b3, b1, w2, b2, w3, w4, b4, w5, b5, w6, w7]
     clist = translateCoords(default)
     for coord_pos in clist:
         if "w" in coord_pos:
@@ -92,102 +92,62 @@ def cpuMove(board, playerColor):
     pass
 
 ## function to check all the possible legal moves at each game state for White
-def whiteLegal(board):
-    ## check horizontal legal moves
-    horiz_legal = []
-    vert_legal = []
-    horiz_blacks = [[board.index(row), k] for row in board for k, x in enumerate(row) if x == " B"]
-    rh = copy.deepcopy(horiz_blacks)
-    lh = copy.deepcopy(horiz_blacks)
-    uh = copy.deepcopy(horiz_blacks)
-    bh = copy.deepcopy(horiz_blacks)
+def Legal(board, colorPlaying, colorAgainst):
+    ## check where pieces are on board
+    pieces = [[board.index(row), k] for row in board for k, x in enumerate(row) if x == colorPlaying]
+
     print("\n\n")
-    print("Blacks:", horiz_blacks)
+    print(colorPlaying, pieces)
     ## HORIZONTAL LEGAL MOVE CHECK
-        # left move available as .-W-B on the board
-        ## could be .WWWB, .WB
-    for pos in lh:
-        # print(black_pos, "\n")
-        try:
-            if board[pos[0]][pos[1] - 1] == " W":
-                if pos[1] - 1 == 0:
-                    next
-                else:
-                    pos[1] -= 1
-                    while board[pos[0]][pos[1]] == " W":
-                        if board[pos[0]][pos[1]-1] == " .":
-                            entry = [pos[0],pos[1]-1]
-                            if entry not in horiz_legal:
-                                horiz_legal.append(entry)
-                            ### NEED TO BREAK OUT OF WHILE LOOPS NO MATTER WHAT
-                            break
-                        if board[pos[0]][pos[1]-1] == " W":
-                            pos[1] -= 1
-        except IndexError:
-            pass
-        # right move available as B-W-. on the board
-        ## could be BWW., BWWW., BW.
-    for pos in rh:
-        try:
-            if board[pos[0]][pos[1] + 1] == " W":
-                if pos[1] + 1 == 7:
-                    next
-                else:
-                    pos[1] += 1
-                    while board[pos[0]][pos[1]] == " W":
-                        if board[pos[0]][pos[1]+1] == " .":
-                            entry = [pos[0],pos[1]+1]
-                            if entry not in horiz_legal:
-                                horiz_legal.append(entry)
-                            break
-                        if board[pos[0]][pos[1] + 1] == " W":
-                            pos[1] += 1
-        except IndexError:
-            pass
-    print("Horiz_Legal: ", horiz_legal)
+        # left move available as .-W-B on the board could be .WWWB, .WB
+        # right move would be BWW or BW
+    rh_legal = findLegal(board, pieces, colorAgainst, row=0, col= 1)
+    lh_legal = findLegal(board, pieces, colorAgainst, row=0, col= -1)
+    horiz_legal = lh_legal
+    ## removing duplicates can only work with set if the elements within the list aren't a list themselves
+    ## list turns from dict to list
+    horiz_legal = list(set(tuple(l) for l in horiz_legal))
     ## VERTICAL LEGAL MOVE CHECK
         ## check if top or bottom move is available
-    for pos in uh:
-        try:
-            ## checking if row above in same col index has white
-            ## remember, the indices for the rows are offset by 1 so (3,3) shows up on board
-            ## as (4,3)
-            if board[pos[0]-1][pos[1]] == " W":
-                # print([pos[0],pos[1]])
-                if pos[0] - 1 == 0:
-                    next
-                else:
-                    pos[0] -= 1
-                    while board[pos[0]][pos[1]] == " W":
-                        if board[pos[0]-1][pos[1]] == " .":
-                            entry = [pos[0]-1,pos[1]]
-                            if entry not in horiz_legal:
-                                vert_legal.append(entry)
-                            break
-                        if board[pos[0]-1][pos[1]] == " W":
-                            pos[0] -= 1
-        except IndexError:
-            pass
-    for pos in bh:
-        try:
-            ## checking if row below in same col index has white
-            if board[pos[0]+1][pos[1]] == " W":
-                # print([pos[0],pos[1]])
-                if pos[0] + 1 == 7:
-                    next
-                else:
-                    pos[0] += 1
-                    while board[pos[0]][pos[1]] == " W":
-                        if board[pos[0]+1][pos[1]] == " .":
-                            entry = [pos[0]+1,pos[1]]
-                            if entry not in horiz_legal:
-                                vert_legal.append(entry)
-                            break
-                        if board[pos[0]+1][pos[1]] == " W":
-                            pos[0] += 1
-        except IndexError:
-            pass
-    print("Vert_Legal:", vert_legal)
+    uh_legal = findLegal(board, pieces, colorAgainst, row = -1, col = 0)
+    bh_legal = findLegal(board, pieces, colorAgainst, row = 1, col = 0)
+    vert_legal = uh_legal + bh_legal
+    vert_legal = list(set(tuple(l) for l in vert_legal))
+    ## DIAGONAL LEGAL MOVE CHECK
+        ## check if NW, NE, SE, SW diagonal moves can be made
+    se_legal = findLegal(board, pieces, colorAgainst, row = 1, col = 1)
+    ne_legal = findLegal(board, pieces, colorAgainst, row = -1, col = 1)
+    nw_legal = findLegal(board, pieces, colorAgainst, row = -1, col = -1)
+    sw_legal = findLegal(board, pieces, colorAgainst, row = 1, col = -1)
+    d_legal = se_legal + ne_legal + nw_legal + sw_legal
+    d_legal = list(set(tuple(l) for l in d_legal))
+    legal = horiz_legal + vert_legal + d_legal
+    print("Legal moves", legal)
+
+## colorPlaying - checking what color I'm looking for legal moves
+## findOpposeColor - the opposite of colorPlaying
+## positionLegal - vertup, vertdown, horiz_sides, and 4 diagonals
+## check row or col position depending on the positionLegal
+def findLegal(board, pieces, colorAgainst, row, col):
+    positionLegal = copy.deepcopy(pieces)
+    legal = []
+    ## Horiz Legals
+    for pos in positionLegal:
+        if board[pos[0]+row][pos[1] + col] == colorAgainst:
+            if (pos[1] + col == 0) or (pos[1] + col == 7) or (pos[0] + row == 0) or (pos[0] + row == 7):
+                next
+            else:
+                pos[0], pos[1] = pos[0]+row, pos[1] + col
+                while board[pos[0]][pos[1]] == colorAgainst:
+                    if board[pos[0]+row][pos[1] +col] == " .":
+                        entry = [pos[0] + row, pos[1]+col]
+                        legal.append(entry)
+                        break
+                    if board[pos[0] +row][pos[1] + col] == colorAgainst:
+                        pos[0], pos[1] = pos[0] +row, pos[1] +col
+    return legal
+
+
 
 # startColor()
 b = board()
@@ -195,4 +155,5 @@ printBoard(b)
 defaultState(b)
 print("\n\n")
 printBoard(b)
-whiteLegal(b)
+Legal(b, " B", " W")
+# Legal(b, " W", " B")
