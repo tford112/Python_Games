@@ -31,6 +31,7 @@ def printBoard(board):
     bottom_letters = "".join("abcdefgh")
     for letter in bottom_letters:
         print("%3s" % letter, end = "" )
+    print("\n\n")
 
 def letters_dict():
     letters = "a b c d e f g h".split()
@@ -82,28 +83,17 @@ def startColor():
         player_start = False
         return player_start
 
-## CPU generates legal move in game
-
-def cpuMove(board, playerColor):
-    ## playercolor is returned from the startColor() function and will determine if CPU is white or not
-    ## player is Black so CPU is white
-    # if playerColor == True:
-        # find out which move to play from list of legal moves
-    pass
-
 ## function to check all the possible legal moves at each game state for White
 def Legal(board, colorPlaying, colorAgainst):
     ## check where pieces are on board
     pieces = [[board.index(row), k] for row in board for k, x in enumerate(row) if x == colorPlaying]
-
-    print("\n\n")
-    print(colorPlaying, pieces)
+    # print(colorPlaying, pieces)
     ## HORIZONTAL LEGAL MOVE CHECK
         # left move available as .-W-B on the board could be .WWWB, .WB
         # right move would be BWW or BW
     rh_legal = findLegal(board, pieces, colorAgainst, row=0, col= 1)
     lh_legal = findLegal(board, pieces, colorAgainst, row=0, col= -1)
-    horiz_legal = lh_legal
+    horiz_legal = rh_legal + lh_legal
     ## removing duplicates can only work with set if the elements within the list aren't a list themselves
     ## list turns from dict to list
     horiz_legal = list(set(tuple(l) for l in horiz_legal))
@@ -122,7 +112,7 @@ def Legal(board, colorPlaying, colorAgainst):
     d_legal = se_legal + ne_legal + nw_legal + sw_legal
     d_legal = list(set(tuple(l) for l in d_legal))
     legal = horiz_legal + vert_legal + d_legal
-    print("Legal moves", legal)
+    return legal
 
 ## colorPlaying - checking what color I'm looking for legal moves
 ## findOpposeColor - the opposite of colorPlaying
@@ -132,28 +122,108 @@ def findLegal(board, pieces, colorAgainst, row, col):
     positionLegal = copy.deepcopy(pieces)
     legal = []
     ## Horiz Legals
-    for pos in positionLegal:
-        if board[pos[0]+row][pos[1] + col] == colorAgainst:
-            if (pos[1] + col == 0) or (pos[1] + col == 7) or (pos[0] + row == 0) or (pos[0] + row == 7):
-                next
-            else:
-                pos[0], pos[1] = pos[0]+row, pos[1] + col
-                while board[pos[0]][pos[1]] == colorAgainst:
-                    if board[pos[0]+row][pos[1] +col] == " .":
-                        entry = [pos[0] + row, pos[1]+col]
-                        legal.append(entry)
-                        break
-                    if board[pos[0] +row][pos[1] + col] == colorAgainst:
-                        pos[0], pos[1] = pos[0] +row, pos[1] +col
+    try:
+        for pos in positionLegal:
+            if board[pos[0]+row][pos[1] + col] == colorAgainst:
+                if (pos[1] + col == 0) or (pos[1] + col == 7) or (pos[0] + row == 0) or (pos[0] + row == 7):
+                    next
+                else:
+                    pos[0], pos[1] = pos[0]+row, pos[1] + col
+                    while board[pos[0]][pos[1]] == colorAgainst:
+                        if board[pos[0]+row][pos[1] +col] == " .":
+                            entry = [pos[0] + row, pos[1]+col]
+                            legal.append(entry)
+                            break
+                        elif board[pos[0] +row][pos[1] + col] == colorAgainst:
+                            pos[0], pos[1] = pos[0] +row, pos[1] +col
+                    ## need to add the below conditional in case next avail space is not playable
+                    # because already occupied by colorPlaying otherwise while loop will not break
+                        else:
+                            break
+    except IndexError:
+        pass
     return legal
 
+## CPU generates move
+## playercolor is returned from the startColor() function and will determine if CPU is white or not
+def cpuMove(board, color):
+    ## if CPU is black
+    if color == " B":
+        poss_moves = Legal(b, " B", " W")
+    else:
+        poss_moves = Legal(b, " W", " B")
+    ## if there is a possible legal move
+    if poss_moves != []:
+        cpuMove = random.choice(poss_moves)
+        # print("CPU moves to {}{}", cpuMove[0], clist[1])
+        board[cpuMove[0]][cpuMove[1]] = color
+        return cpuMove
+    else:
+        print("No possible move. CPU passes turn.")
+
+def flip(board, colorPlaying, colorAgainst, who):
+    if who == "cpu":
+        # move = list(cpuMove(board, colorPlaying)) ## tuples can't support item assignment
+        # print(move)
+        move = [2,2]
+        ## horizontal flipping
+        findOppose(board, colorPlaying, colorAgainst, move, row=0, col=1)
+        findOppose(board, colorPlaying, colorAgainst, move, row=0, col=-1)
+        ## vertical flipping
+        findOppose(board, colorPlaying, colorAgainst, move, row=1, col=0)
+        findOppose(board, colorPlaying, colorAgainst, move, row=-1, col=0)
+        ## diagonal flipping
+        findOppose(board, colorPlaying, colorAgainst, move, row=1, col=1)
+        findOppose(board, colorPlaying, colorAgainst, move, row=1, col=-1)
+        findOppose(board, colorPlaying, colorAgainst, move, row=-1, col=1)
+        findOppose(board, colorPlaying, colorAgainst, move, row=-1, col=-1)
+
+## from location of placed piece, flip indices of all the opposing colors in between
+def findOppose(board, colorPlaying, colorAgainst, piece, row, col):
+    ## find opposing pieces and turn them into colorPlaying
+    valid = False
+    try:
+        if board[piece[0]+row][piece[1] + col] == colorAgainst:
+            if (piece[1] + col == 0) or (piece[1] + col == 7) or (piece[0] + row == 0) or (piece[0] + row == 7):
+                next
+            else:
+                piece[0], piece[1] = piece[0]+row, piece[1] + col
+                ## check if there is colorPlaying surrounding these pieces otherwise would flip everything
+                while board[piece[0]][piece[1]] != colorPlaying:
+                    ## no surrounding colorPlaying piece
+                    ## if black, example would be BWW. but need BWWB
+                    if board[piece[0]+row][piece[1]+col] == " .":
+                        break
+                    ## reached boundaries of board
+                    elif (piece[1] + col < 0) or (piece[1] + col > 7) or (piece[0] + row < 0) or (piece[0] + row > 7):
+                        break
+                    elif board[piece[0]][piece[1]] == colorPlaying:
+                        valid = True
+                        break
+                    else:
+                        board[piece[0]][piece[1]] = board[piece[0]+row][piece[1]+col]
+                ## need to reset position otherwise
+                ## flip
+                if valid:
+                    # print("The row, col:")
+                    while board[piece[0]][piece[1]] == colorAgainst:
+                        board[piece[0]][piece[1]] = colorPlaying
+                        if board[piece[0]+row][piece[1] + col] == colorAgainst:
+                            board[piece[0]][piece[1]] = board[piece[0]+row][piece[1]+col]
+                        else:
+                            break
+    except IndexError:
+        pass
 
 
 # startColor()
 b = board()
 printBoard(b)
 defaultState(b)
-print("\n\n")
+# print("\n\n")
 printBoard(b)
-Legal(b, " B", " W")
+# Legal(b, " B", " W")
 # Legal(b, " W", " B")
+# move = cpuMove(b, " B")
+flip(b, " B", " W", "cpu")
+printBoard(b)
