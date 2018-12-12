@@ -60,7 +60,8 @@ def defaultState(board):
     w6 = [2, "d", "w"]
     b5 = [3, "e", "b"]
     w7 = [5, "c", "w"]
-    default = [w1, b3, b1, w2, b2, w3, w4, b4, w5, b5, w6, w7]
+    b6 = [6, "f", "b"]
+    default = [w1, b3, b1, w2, b2, w3, w4, b4, w5, b5, w6, w7, b6]
     clist = translateCoords(default)
     for coord_pos in clist:
         if "w" in coord_pos:
@@ -77,11 +78,11 @@ def startColor():
     player_start = True
     if p1.lower().startswith("b"):
         print("Okay, player is black.")
-        return player_start
+        return player_start, " B"
     else:
         print("Okay, player is white")
         player_start = False
-        return player_start
+        return player_start, " W"
 
 ## function to check all the possible legal moves at each game state for White
 def Legal(board, colorPlaying, colorAgainst):
@@ -155,65 +156,100 @@ def cpuMove(board, color):
     ## if there is a possible legal move
     if poss_moves != []:
         cpuMove = random.choice(poss_moves)
-        # print("CPU moves to {}{}", cpuMove[0], clist[1])
+        ld = letters_dict()
+        inv_ld = {k:l for l, k in ld.items()} ## reverses letters_dict so {0: "a", 1:"b", 2:"c"...}
+        print("CPU moves to {}, {}".format(cpuMove[0]+1, inv_ld[cpuMove[1]]))
         board[cpuMove[0]][cpuMove[1]] = color
         return cpuMove
     else:
         print("No possible move. CPU passes turn.")
 
+def playerMove(board, color):
+    if color == " B":
+        poss_moves = Legal(b, " B", " W")
+    else:
+        poss_moves = Legal(b, " W", " B")
+    if poss_moves != []:
+        play_move = input("Where do you want to place your piece? Enter a row number then a column letter for coordinates.\n")
+        play_move = play_move.replace(" ", "")
+        ld = letters_dict()
+        inv_ld = {k:l for l, k in ld.items()}
+        print("You have moved to {}".format(play_move))
+
+
+
 def flip(board, colorPlaying, colorAgainst, who):
     if who == "cpu":
-        # move = list(cpuMove(board, colorPlaying)) ## tuples can't support item assignment
-        # print(move)
-        move = [2,2]
-        ## horizontal flipping
-        findOppose(board, colorPlaying, colorAgainst, move, row=0, col=1)
-        findOppose(board, colorPlaying, colorAgainst, move, row=0, col=-1)
-        ## vertical flipping
-        findOppose(board, colorPlaying, colorAgainst, move, row=1, col=0)
-        findOppose(board, colorPlaying, colorAgainst, move, row=-1, col=0)
-        ## diagonal flipping
-        findOppose(board, colorPlaying, colorAgainst, move, row=1, col=1)
-        findOppose(board, colorPlaying, colorAgainst, move, row=1, col=-1)
-        findOppose(board, colorPlaying, colorAgainst, move, row=-1, col=1)
-        findOppose(board, colorPlaying, colorAgainst, move, row=-1, col=-1)
+        move = list(cpuMove(board, colorPlaying)) ## tuples can't support item assignment
+        board[move[0]][move[1]] = colorPlaying
+        all = allOppose(board, colorPlaying, colorAgainst, move)
+        ## now turn the colorAgainst into colorPlaying as they are viable to be "flipped"
+        for pos in all:
+            board[pos[0]][pos[1]] = colorPlaying
+
+def allOppose(board, colorPlaying, colorAgainst, piece):
+    ## horizontal flipping
+    rh = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=0, col=1)
+    lh = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=0, col=-1)
+    # ## vertical flipping
+    bv = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=1, col=0)
+    uv = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=-1, col=0)
+    # ## diagonal flipping
+    se = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=1, col=1)
+    sw = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=1, col=-1)
+    ne = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=-1, col=1)
+    nw = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=-1, col=-1)
+    all = rh + lh + bv + uv + se + sw + nw + ne
+    return all
 
 ## from location of placed piece, flip indices of all the opposing colors in between
 def findOppose(board, colorPlaying, colorAgainst, piece, row, col):
     ## find opposing pieces and turn them into colorPlaying
     valid = False
+    opp = []
+    ## need a copy of the piece for checking whether valid flip can occur otherwise will
+    ## only append the last possible element when actually doing the flip past the "if valid" part
+    check_piece = copy.deepcopy(piece)
     try:
-        if board[piece[0]+row][piece[1] + col] == colorAgainst:
-            if (piece[1] + col == 0) or (piece[1] + col == 7) or (piece[0] + row == 0) or (piece[0] + row == 7):
+        if board[check_piece[0]+row][check_piece[1] + col] == colorAgainst:
+            if (check_piece[1] + col == 0) or (check_piece[1] + col == 7) or (check_piece[0] + row == 0) or (check_piece[0] + row == 7):
                 next
             else:
-                piece[0], piece[1] = piece[0]+row, piece[1] + col
-                ## check if there is colorPlaying surrounding these pieces otherwise would flip everything
-                while board[piece[0]][piece[1]] != colorPlaying:
+                check_piece[0], check_piece[1] = check_piece[0]+row, check_piece[1] + col
+            ## check if there is colorPlaying surrounding these pieces otherwise would flip everything
+            ## directly touching the piece
+                while board[check_piece[0]][check_piece[1]] != colorPlaying:
                     ## no surrounding colorPlaying piece
                     ## if black, example would be BWW. but need BWWB
-                    if board[piece[0]+row][piece[1]+col] == " .":
+                    if board[check_piece[0]+row][check_piece[1]+col] == " .":
                         break
                     ## reached boundaries of board
-                    elif (piece[1] + col < 0) or (piece[1] + col > 7) or (piece[0] + row < 0) or (piece[0] + row > 7):
+                    elif (check_piece[1] + col < 0) or (check_piece[1] + col > 7) or (check_piece[0] + row < 0) or (check_piece[0] + row > 7):
                         break
-                    elif board[piece[0]][piece[1]] == colorPlaying:
+                    elif board[check_piece[0]+row][check_piece[1]+col] == colorPlaying:
                         valid = True
                         break
-                    else:
-                        board[piece[0]][piece[1]] = board[piece[0]+row][piece[1]+col]
-                ## need to reset position otherwise
-                ## flip
+                    else: ## reached another colorAgainst
+                        check_piece[0], check_piece[1] = check_piece[0]+row, check_piece[1]+col
+            # flip
                 if valid:
-                    # print("The row, col:")
+                    piece[0], piece[1] = piece[0] + row, piece[1] +col
                     while board[piece[0]][piece[1]] == colorAgainst:
-                        board[piece[0]][piece[1]] = colorPlaying
-                        if board[piece[0]+row][piece[1] + col] == colorAgainst:
-                            board[piece[0]][piece[1]] = board[piece[0]+row][piece[1]+col]
-                        else:
+                        ## there is an issue of directly changing here as the next findOppose() will
+                        ## continue where the board is left off which means other pieces will change incorrectly
+                            # board[piece[0]][piece[1]] = colorPlaying
+                        opp_piece = piece[0],piece[1]
+                        opp.append((piece[0], piece[1]))  ## append to list of all opposing pieces
+                        if board[piece[0]+row][piece[1] + col] == colorPlaying:
                             break
+                        # if board[piece[0]+row][piece[1] + col] == colorAgainst: ## keep progressing through
+                        #     piece[0], piece[1] = piece[0]+row, piece[1]+col
+                        else:
+                            piece[0], piece[1] = piece[0]+row, piece[1]+col
+
     except IndexError:
         pass
+    return opp
 
 
 # startColor()
@@ -222,8 +258,7 @@ printBoard(b)
 defaultState(b)
 # print("\n\n")
 printBoard(b)
-# Legal(b, " B", " W")
-# Legal(b, " W", " B")
-# move = cpuMove(b, " B")
-flip(b, " B", " W", "cpu")
-printBoard(b)
+
+# flip(b, " B", " W", "cpu")
+# printBoard(b)
+playerMove(b, " B")
