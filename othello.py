@@ -113,7 +113,14 @@ def Legal(board, colorPlaying, colorAgainst):
     d_legal = se_legal + ne_legal + nw_legal + sw_legal
     d_legal = list(set(tuple(l) for l in d_legal))
     legal = horiz_legal + vert_legal + d_legal
-    return legal
+    ld = letters_dict()
+    inv_ld = {k:l for l, k in ld.items()} ## reverses letters_dict so {0: "a", 1:"b", 2:"c"...}
+    ## convert the legal moves into board interface so the rows need to be offset by 1 and need col letters
+    board_legal = []
+    for item in legal:
+        item = (int(item[0])+1, inv_ld[item[1]]) ## already converts to proper board interface for CPU
+        board_legal.append(item)
+    return board_legal
 
 ## colorPlaying - checking what color I'm looking for legal moves
 ## findOpposeColor - the opposite of colorPlaying
@@ -156,10 +163,8 @@ def cpuMove(board, color):
     ## if there is a possible legal move
     if poss_moves != []:
         cpuMove = random.choice(poss_moves)
-        ld = letters_dict()
-        inv_ld = {k:l for l, k in ld.items()} ## reverses letters_dict so {0: "a", 1:"b", 2:"c"...}
-        print("CPU moves to {}, {}".format(cpuMove[0]+1, inv_ld[cpuMove[1]]))
-        board[cpuMove[0]][cpuMove[1]] = color
+        print("CPU moves to {}, {}".format(cpuMove[0], cpuMove[1]))
+        # cpuMove = int(cpuMove[0]), cpuMove[1]
         return cpuMove
     else:
         print("No possible move. CPU passes turn.")
@@ -170,22 +175,37 @@ def playerMove(board, color):
     else:
         poss_moves = Legal(b, " W", " B")
     if poss_moves != []:
-        play_move = input("Where do you want to place your piece? Enter a row number then a column letter for coordinates.\n")
-        play_move = play_move.replace(" ", "")
         ld = letters_dict()
-        inv_ld = {k:l for l, k in ld.items()}
-        print("You have moved to {}".format(play_move))
+        # inv_ld = {k:l for l, k in ld.items()}
+    ## check if move is within poss_moves
+        execute = 0
+        while execute != 1:
+            play_move = input("Where do you want to place your piece? Enter a row number then a column letter for coordinates.\n")
+            play_move = play_move.replace(" ", "")
+            board_move = (int(play_move[0]), play_move[1]) ## format as tuple of row num and col letter
+            if board_move not in poss_moves:
+                print("Sorry, that is not a possible move")
+                continue
+            else:
+                print("You have moved to {}".format(board_move))
+                return board_move
+                execute += 1
+    else:
+        print("No moves left. You pass your turn")
 
 
-
-def flip(board, colorPlaying, colorAgainst, who):
+def flip(board, colorPlaying, colorAgainst, who="player"):
+    ld = letters_dict()
     if who == "cpu":
-        move = list(cpuMove(board, colorPlaying)) ## tuples can't support item assignment
-        board[move[0]][move[1]] = colorPlaying
-        all = allOppose(board, colorPlaying, colorAgainst, move)
-        ## now turn the colorAgainst into colorPlaying as they are viable to be "flipped"
-        for pos in all:
-            board[pos[0]][pos[1]] = colorPlaying
+        move = cpuMove(board, colorPlaying) ## tuples can't support item assignment
+    else:
+        move = playerMove(board, colorPlaying)
+    move = [move[0]-1, ld[move[1]]]
+    board[move[0]][move[1]] = colorPlaying
+    all = allOppose(board, colorPlaying, colorAgainst, move)
+    ## now turn the colorAgainst into colorPlaying as they are viable to be "flipped"
+    for pos in all:
+        board[pos[0]][pos[1]] = colorPlaying
 
 def allOppose(board, colorPlaying, colorAgainst, piece):
     ## horizontal flipping
@@ -259,6 +279,19 @@ defaultState(b)
 # print("\n\n")
 printBoard(b)
 
-# flip(b, " B", " W", "cpu")
-# printBoard(b)
-playerMove(b, " B")
+flip(b, " B", " W", "cpu")
+printBoard(b)
+
+flip(b, " W", " B")
+printBoard(b)
+
+flip(b, " B", " W", "cpu")
+printBoard(b)
+
+flip(b, " W", " B")
+printBoard(b)
+flip(b, " B", " W", "cpu")
+printBoard(b)
+
+flip(b, " W", " B")
+printBoard(b)
