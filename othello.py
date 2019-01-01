@@ -145,33 +145,27 @@ def Legal(board, colorPlaying, colorAgainst):
 def findLegal(board, pieces, colorAgainst, row, col):
     positionLegal = copy.deepcopy(pieces)
     legal = []
-    ## Horiz Legals
-    try:
-        for pos in positionLegal:
-            col_break = pos[1] + col
-            row_break = pos[0] + row
-            if (col_break < 0) or (col_break > 7) or (row_break < 0) or (row_break > 7):
-                pass
+    for pos in positionLegal:
+        ncol = pos[1] + col
+        nrow = pos[0] + row
+        try:
+            # Moved try-except loop outside since this eliminates the need to
+            # check bounds
+            if not board[nrow][ncol] == colorAgainst:
+                # Case when first nrow or ncol is . or colorPlaying
+                continue
             else:
-                if board[pos[0]+row][pos[1] + col] == colorAgainst:
-                    pos[0], pos[1] = pos[0]+row, pos[1] + col
-                    while board[pos[0]][pos[1]] == colorAgainst:
-                        if board[pos[0]+row][pos[1] +col] == " .":
-                            entry = [pos[0] + row, pos[1]+col]
-                            legal.append(entry)
-                            break
-                        ## making sure that the next piece doesn't have a negative
-                        elif (pos[0]+row < -1) or (pos[1] + col< 0) or (pos[0] + row > 7) or (pos[1] + col >7):
-                            break
-                        elif board[pos[0] +row][pos[1] + col] == colorAgainst:
-                            pos[0], pos[1] = pos[0] +row, pos[1] +col
-                            continue
-                    ## need to add the below conditional in case next avail space is not playable
-                    # because already occupied by colorPlaying otherwise while loop will not break
-                        else:
-                            break
-    except IndexError:
-        pass
+                while board[nrow][ncol] == colorAgainst:
+                    # Now all we care are if we hit a ., since the while loop
+                    # will terminate if a colorPlaying is encountered and
+                    # the try-except catches the boundary condition.
+                    ncol += col
+                    nrow += row
+                    if board[nrow][ncol] == ' .':
+                        legal.append([nrow, ncol])
+                        break
+        except IndexError:
+            continue
     return legal
 
 ## CPU generates move
