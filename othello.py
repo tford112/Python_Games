@@ -11,6 +11,7 @@ For more information on game rules, please refer to http://www.ultraboardgames.c
 import random
 import sys
 import copy
+from time import sleep
 
 def board():
     ## board access the row first and then the column
@@ -61,7 +62,20 @@ def defaultState(board):
     b5 = [3, "e", "b"]
     w7 = [5, "c", "w"]
     b6 = [6, "f", "b"]
-    default = [w1, b3, b1, w2, b2, w3, w4, b4, w5, b5, w6, w7, b6]
+
+    ##side testing
+    w11 = [1, "a", "w"]
+    w14 = [1, "d", "b"]
+    b12 = [1, "b", "b"]
+    w41 = [4, "a", "w"]
+    b61 = [6, "a", "b"]
+    b71 = [7, "a", "b"]
+
+    w62 = [6, "b", "w"]
+    b81 = [8, "a", "b"]
+    b72 = [7, "b", "b"]
+    default = [w1, b3, b1, w2, b2, w3, w4, b4, w5, b5, w6, w7, b6,
+                w11, w14, b12, w41, b61, b71, w62, b81, b72]
     clist = translateCoords(default)
     for coord_pos in clist:
         if "w" in coord_pos:
@@ -118,8 +132,10 @@ def Legal(board, colorPlaying, colorAgainst):
     ## convert the legal moves into board interface so the rows need to be offset by 1 and need col letters
     board_legal = []
     for item in legal:
-        item = (int(item[0])+1, inv_ld[item[1]]) ## already converts to proper board interface for CPU
-        board_legal.append(item)
+        if item[1] in inv_ld.keys():
+            if item[0] >= 0: ##removing option for "CPU moves to '0, b', which is really 8 and makes no sense"
+                item = (int(item[0])+1, inv_ld[item[1]]) ## already converts to proper board interface for CPU
+                board_legal.append(item)
     return board_legal
 
 ## colorPlaying - checking what color I'm looking for legal moves
@@ -129,27 +145,27 @@ def Legal(board, colorPlaying, colorAgainst):
 def findLegal(board, pieces, colorAgainst, row, col):
     positionLegal = copy.deepcopy(pieces)
     legal = []
-    ## Horiz Legals
-    try:
-        for pos in positionLegal:
-            if board[pos[0]+row][pos[1] + col] == colorAgainst:
-                if (pos[1] + col == 0) or (pos[1] + col == 7) or (pos[0] + row == 0) or (pos[0] + row == 7):
-                    next
-                else:
-                    pos[0], pos[1] = pos[0]+row, pos[1] + col
-                    while board[pos[0]][pos[1]] == colorAgainst:
-                        if board[pos[0]+row][pos[1] +col] == " .":
-                            entry = [pos[0] + row, pos[1]+col]
-                            legal.append(entry)
-                            break
-                        elif board[pos[0] +row][pos[1] + col] == colorAgainst:
-                            pos[0], pos[1] = pos[0] +row, pos[1] +col
-                    ## need to add the below conditional in case next avail space is not playable
-                    # because already occupied by colorPlaying otherwise while loop will not break
-                        else:
-                            break
-    except IndexError:
-        pass
+    for pos in positionLegal:
+        ncol = pos[1] + col
+        nrow = pos[0] + row
+        try:
+            # Moved try-except loop outside since this eliminates the need to
+            # check bounds
+            if not board[nrow][ncol] == colorAgainst:
+                # Case when first nrow or ncol is . or colorPlaying
+                continue
+            else:
+                while board[nrow][ncol] == colorAgainst:
+                    # Now all we care are if we hit a ., since the while loop
+                    # will terminate if a colorPlaying is encountered and
+                    # the try-except catches the boundary condition.
+                    ncol += col
+                    nrow += row
+                    if board[nrow][ncol] == ' .':
+                        legal.append([nrow, ncol])
+                        break
+        except IndexError:
+            continue
     return legal
 
 ## CPU generates move
@@ -157,9 +173,9 @@ def findLegal(board, pieces, colorAgainst, row, col):
 def cpuMove(board, color):
     ## if CPU is black
     if color == " B":
-        poss_moves = Legal(b, " B", " W")
+        poss_moves = Legal(board, " B", " W")
     else:
-        poss_moves = Legal(b, " W", " B")
+        poss_moves = Legal(board, " W", " B")
     ## if there is a possible legal move
     if poss_moves != []:
         cpuMove = random.choice(poss_moves)
@@ -168,14 +184,16 @@ def cpuMove(board, color):
         return cpuMove
     else:
         print("No possible move. CPU passes turn.")
+        return 0
 
 def playerMove(board, color):
     if color == " B":
-        poss_moves = Legal(b, " B", " W")
+        poss_moves = Legal(board, " B", " W")
     else:
-        poss_moves = Legal(b, " W", " B")
+        poss_moves = Legal(board, " W", " B")
     if poss_moves != []:
         ld = letters_dict()
+        print("Possible", poss_moves)
         # inv_ld = {k:l for l, k in ld.items()}
     ## check if move is within poss_moves
         execute = 0
@@ -192,20 +210,29 @@ def playerMove(board, color):
                 execute += 1
     else:
         print("No moves left. You pass your turn")
-
+        return 0
 
 def flip(board, colorPlaying, colorAgainst, who="player"):
     ld = letters_dict()
     if who == "cpu":
         move = cpuMove(board, colorPlaying) ## tuples can't support item assignment
+
     else:
         move = playerMove(board, colorPlaying)
-    move = [move[0]-1, ld[move[1]]]
-    board[move[0]][move[1]] = colorPlaying
-    all = allOppose(board, colorPlaying, colorAgainst, move)
-    ## now turn the colorAgainst into colorPlaying as they are viable to be "flipped"
-    for pos in all:
-        board[pos[0]][pos[1]] = colorPlaying
+
+    if move != 0:
+        # if move[0] == 0
+        move = [move[0]-1, ld[move[1]]]
+        # print(move)
+        board[move[0]][move[1]] = colorPlaying
+        all = allOppose(board, colorPlaying, colorAgainst, move)
+        ## now turn the colorAgainst into colorPlaying as they are viable to be "flipped"
+        for pos in all:
+            board[pos[0]][pos[1]] = colorPlaying
+    else:
+        ## end game if both participants cannot make a move
+        if cpuMove(board, colorPlaying) == playerMove(board, colorPlaying): ## both == 0 which is condition of end
+            sys.exit()
 
 def allOppose(board, colorPlaying, colorAgainst, piece):
     ## horizontal flipping
@@ -216,8 +243,8 @@ def allOppose(board, colorPlaying, colorAgainst, piece):
     uv = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=-1, col=0)
     # ## diagonal flipping
     se = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=1, col=1)
-    sw = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=1, col=-1)
-    ne = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=-1, col=1)
+    ne = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=1, col=-1)
+    sw = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=-1, col=1)
     nw = findOppose(board, colorPlaying, colorAgainst, copy.deepcopy(piece), row=-1, col=-1)
     all = rh + lh + bv + uv + se + sw + nw + ne
     return all
@@ -232,7 +259,7 @@ def findOppose(board, colorPlaying, colorAgainst, piece, row, col):
     check_piece = copy.deepcopy(piece)
     try:
         if board[check_piece[0]+row][check_piece[1] + col] == colorAgainst:
-            if (check_piece[1] + col == 0) or (check_piece[1] + col == 7) or (check_piece[0] + row == 0) or (check_piece[0] + row == 7):
+            if (check_piece[1] + col < 0) or (check_piece[1] + col > 7) or (check_piece[0] + row < 0) or (check_piece[0] + row > 7):
                 next
             else:
                 check_piece[0], check_piece[1] = check_piece[0]+row, check_piece[1] + col
@@ -271,27 +298,29 @@ def findOppose(board, colorPlaying, colorAgainst, piece, row, col):
         pass
     return opp
 
+## end game function -- check if there are any moves available
+def endGame():
+    return True
 
-# startColor()
-b = board()
-printBoard(b)
-defaultState(b)
-# print("\n\n")
-printBoard(b)
+def play():
+    # startColor()
+    b = board()
+    printBoard(b)
+    defaultState(b)
+    # print("\n\n")
+    printBoard(b)
+    while True:
+        sleep(1)
+        flip(b, " B", " W", "cpu")
+        printBoard(b)
+        flip(b, " W", " B")
+        printBoard(b)
+    print("End Game")
 
-flip(b, " B", " W", "cpu")
-printBoard(b)
+play()
 
-flip(b, " W", " B")
-printBoard(b)
-
-flip(b, " B", " W", "cpu")
-printBoard(b)
-
-flip(b, " W", " B")
-printBoard(b)
-flip(b, " B", " W", "cpu")
-printBoard(b)
-
-flip(b, " W", " B")
-printBoard(b)
+# b = board()
+# printBoard(b)
+# defaultState(b)
+# printBoard(b)
+# Legal(b, " W", " B")
